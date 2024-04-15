@@ -1,0 +1,104 @@
+Task 1
+1_1
+CREATE SCHEMA IF NOT EXISTS pandemic;
+
+1_2
+USE pandemic;
+
+1_3
+SELECT * FROM infectious_cases;
+
+
+Task 2
+
+2_1
+CREATE TABLE IF NOT EXISTS countries (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    country_name VARCHAR(255) NOT NULL UNIQUE,
+    country_code VARCHAR(10) NOT NULL UNIQUE
+);
+
+2_2
+INSERT INTO countries (country_name, country_code)
+SELECT DISTINCT entity, code FROM infectious_cases;
+
+2_3
+SELECT * FROM countries;
+
+2_4
+CREATE TABLE IF NOT EXISTS infectious_cases_norm AS
+SELECT * FROM infectious_cases;
+
+2_5
+SELECT * FROM infectious_cases_norm;
+
+2_6
+ALTER TABLE infectious_cases_norm
+ADD COLUMN id INT AUTO_INCREMENT PRIMARY KEY FIRST,
+ADD COLUMN country_id INT AFTER id,
+ADD CONSTRAINT fk_country_id FOREIGN KEY (country_id) REFERENCES countries(id);
+
+2_7
+UPDATE infectious_cases_norm AS i, countries AS c  
+SET i.country_id = c.id WHERE c.country_code = i.code;
+
+2_8
+ALTER TABLE infectious_cases_norm
+DROP COLUMN entity,
+DROP COLUMN code;
+
+2_9
+CREATE TABLE IF NOT EXISTS infectious_stats AS
+SELECT * FROM infectious_cases_norm;
+DROP TABLE infectious_cases_norm;
+
+2_10
+SELECT * FROM infectious_stats;
+
+
+Task 3
+SELECT country_id, 
+	AVG(number_rabies) AS avg_number_rabies,
+	MIN(number_rabies) AS min_number_rabies, 
+	MAX(number_rabies) AS max_number_rabies,
+	SUM(number_rabies) AS sum_number_rabies
+FROM infectious_stats
+WHERE number_rabies IS NOT NULL AND number_rabies <> ''
+GROUP BY country_id
+ORDER BY avg_number_rabies DESC
+LIMIT 10;
+
+Task 4
+SELECT  id, year,
+MAKEDATE(year, 1) AS initial_date,
+CURDATE() as cur_date,
+TIMESTAMPDIFF(YEAR, MAKEDATE(year, 1), CURDATE()) AS subtraction_years
+FROM infectious_stats;
+
+
+Task 5
+DROP FUNCTION IF EXISTS subtraction_years;
+
+DELIMITER //
+
+CREATE FUNCTION Subtraction_years(year INT)
+RETURNS INT
+DETERMINISTIC 
+NO SQL
+BEGIN
+    DECLARE result INT;
+    SET result = TIMESTAMPDIFF(YEAR, MAKEDATE(year, 1), CURDATE());
+    RETURN result;
+END //
+
+DELIMITER ;
+
+SELECT id, year, Subtraction_years(year) as subtr_years 
+FROM infectious_stats;
+
+
+
+
+
+
+
